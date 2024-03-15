@@ -1,5 +1,5 @@
 ﻿
-namespace MyApp;
+namespace DFind;
 
 /// <summary>
 /// Checks for command line arguments and configures the DuplicateFinder instance accordingly

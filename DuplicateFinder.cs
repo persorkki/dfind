@@ -2,15 +2,17 @@ using System.Buffers;
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
+using System.Text;
 
-namespace MyApp;
+namespace DFind;
 
 public class DuplicateFinder
 {
     private SearchOption _recursive = SearchOption.TopDirectoryOnly;
 
-    public ImmutableArray<string> Pattern { get; set; }
+    public List<string> Pattern { get; set; }
     public IEnumerable<IGrouping<long, FileInfo>> FileSizeGroups { get; set; }
     public bool Verbal { get; set; }
     public SearchOption Recursive
@@ -55,7 +57,7 @@ public class DuplicateFinder
             AttributesToSkip = FileAttributes.Hidden | FileAttributes.System | FileAttributes.Temporary
 
         };
-        if (Pattern.Length > 0)
+        if (Pattern.Count > 0)
         {
             FileSizeGroups = from x in dInfo.GetFiles("*.*", options)
                              where Pattern.Contains(x.Extension)
@@ -63,7 +65,7 @@ public class DuplicateFinder
                              select g;
         }
         else
-        {
+        {   
             FileSizeGroups = from x in dInfo.GetFiles("*.*", options)
                              group x by x.Length into g
                              select g;
@@ -155,7 +157,7 @@ public class DuplicateFinder
 
             Span<byte> startSpanA = new(bufferA, 0, bufsize);
             Span<byte> startSpanB = new(bufferB, 0, bufsize);
-
+            
             if (!startSpanA.SequenceEqual(startSpanB))
             {
                 return false;
@@ -199,29 +201,24 @@ public class DuplicateFinder
     {
 
         GetFiles();
-
         ConcurrentBag<FileInfo> Duplicates = [];
-
         Parallel.ForEach(FileSizeGroups, new ParallelOptions { MaxDegreeOfParallelism = 10 }, group =>
         {
             if (group.Skip(1).Any())
             {
                 HandleGroup(group, Duplicates);
-            }
+            }   
 
         });
-
+        
         foreach (FileInfo duplicate in Duplicates)
         {
-            Console.WriteLine(duplicate.FullName);
+            Console.WriteLine($"\"{duplicate.FullName}\"");
         }
-
-
+    
         if (Verbal)
         {
             Console.WriteLine($"found {Duplicates.Count} duplicates");
-        }
-
+        }        
     }
-
 }
